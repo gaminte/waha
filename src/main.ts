@@ -40,13 +40,18 @@ async function loadModules(): Promise<
 
 async function bootstrap() {
   const [AppModule, SwaggerModule] = await loadModules();
+  const httpsOptions = AppModule.getHttpsOptions();
   const app = await NestFactory.create(AppModule, {
     logger: getLogLevels(false),
+    httpsOptions: httpsOptions,
   });
 
   app.enableShutdownHooks();
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors();
+  // Ideally, we should apply it globally.
+  // but for now we added it ValidationPipe on Controller or endpoint level
+  // app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   // Allow to send big body - for images and attachments
   app.use(json({ limit: '50mb' }));
@@ -56,6 +61,7 @@ async function bootstrap() {
   const swaggerConfigurator = new SwaggerModule(app);
   swaggerConfigurator.configure(WAHA_WEBHOOKS);
 
+  AppModule.appReady(app);
   const config = app.get(WhatsappConfigService);
   await app.listen(config.port);
   console.log(`WhatsApp HTTP API is running on: ${await app.getUrl()}`);

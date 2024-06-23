@@ -1,8 +1,10 @@
-import { ConsoleLogger, Module } from '@nestjs/common';
+import { ConsoleLogger, INestApplication, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PassportModule } from '@nestjs/passport';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { TerminusModule } from '@nestjs/terminus';
+import { BufferJsonReplacerInterceptor } from '@waha/api/BufferJsonReplacerInterceptor';
 import { join } from 'path';
 
 import { AuthController } from '../api/auth.controller';
@@ -82,6 +84,10 @@ const PROVIDERS = [
     provide: WAHAHealthCheckService,
     useClass: WAHAHealthCheckServiceCore,
   },
+  {
+    provide: APP_INTERCEPTOR,
+    useClass: BufferJsonReplacerInterceptor,
+  },
   DashboardConfigServiceCore,
   SwaggerConfigServiceCore,
   WhatsappConfigService,
@@ -96,4 +102,12 @@ const PROVIDERS = [
 })
 export class AppModuleCore {
   constructor(protected config: WhatsappConfigService) {}
+
+  static getHttpsOptions() {
+    return undefined;
+  }
+
+  static appReady(app: INestApplication) {
+    return;
+  }
 }

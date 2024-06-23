@@ -6,21 +6,16 @@ FROM node:${NODE_VERSION} as build
 ENV PUPPETEER_SKIP_DOWNLOAD=True
 
 # npm packages
-RUN apt-get update \
-    && apt-get install -y openssh-client
-RUN apt install openssh-client
-RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-
 WORKDIR /src
 COPY package.json .
 COPY yarn.lock .
 RUN yarn set version 3.6.3
-RUN --mount=type=ssh yarn install
+RUN yarn install
 
 # App
 WORKDIR /src
 ADD . /src
-RUN --mount=type=ssh yarn install
+RUN yarn install
 RUN yarn build && find ./dist -name "*.d.ts" -delete
 
 #
@@ -34,6 +29,9 @@ ENV NODE_OPTIONS="--max-old-space-size=16384"
 ARG USE_BROWSER=chromium
 
 RUN echo "USE_BROWSER=$USE_BROWSER"
+
+# Install ffmpeg to generate previews for videos
+RUN apt-get update && apt-get install -y ffmpeg --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # Install fonts if using either chromium or chrome
 RUN if [ "$USE_BROWSER" = "chromium" ] || [ "$USE_BROWSER" = "chrome" ]; then \
@@ -69,6 +67,10 @@ WORKDIR /app
 COPY package.json ./
 COPY --from=build /src/node_modules ./node_modules
 COPY --from=build /src/dist ./dist
+
+# Chokidar options to monitor file changes
+ENV CHOKIDAR_USEPOLLING=1
+ENV CHOKIDAR_INTERVAL=5000
 
 # Run command, etc
 EXPOSE 3000
